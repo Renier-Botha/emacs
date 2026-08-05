@@ -78,6 +78,7 @@
 (require 'init-magit)
 (require 'init-prog)
 (require 'init-completion)
+(require 'init-langs)
 (require 'init-treesit)
 (require 'init-eglot)
 

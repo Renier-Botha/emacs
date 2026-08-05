@@ -33,7 +33,10 @@
   :config
   (setq eglot-autoshutdown t
         eglot-report-progress nil
-        eglot-confirm-server-edits nil))
+        eglot-confirm-server-edits nil)
+  ;; Eglot has no built-in entry for Svelte.
+  (add-to-list 'eglot-server-programs
+               '(svelte-mode . ("svelteserver" "--stdio"))))
 
 ;; --- Auto-install helper ---------------------------------------------------
 
@@ -42,10 +45,13 @@
     (python-ts-mode     :bin "pyright-langserver" :install ("pip" "install" "--user" "pyright"))
     (js-mode            :bin "typescript-language-server" :install ("npm" "install" "-g" "typescript-language-server" "typescript"))
     (js-ts-mode         :bin "typescript-language-server" :install ("npm" "install" "-g" "typescript-language-server" "typescript"))
+    (typescript-mode    :bin "typescript-language-server" :install ("npm" "install" "-g" "typescript-language-server" "typescript"))
     (typescript-ts-mode :bin "typescript-language-server" :install ("npm" "install" "-g" "typescript-language-server" "typescript"))
+    (rust-mode          :bin "rust-analyzer" :install ("rustup" "component" "add" "rust-analyzer"))
     (rust-ts-mode       :bin "rust-analyzer" :install ("rustup" "component" "add" "rust-analyzer"))
     (go-mode            :bin "gopls" :install ("go" "install" "golang.org/x/tools/gopls@latest"))
-    (go-ts-mode         :bin "gopls" :install ("go" "install" "golang.org/x/tools/gopls@latest")))
+    (go-ts-mode         :bin "gopls" :install ("go" "install" "golang.org/x/tools/gopls@latest"))
+    (svelte-mode        :bin "svelteserver" :install ("npm" "install" "-g" "svelte-language-server")))
   "Per-major-mode LSP server bootstrap info: (MAJOR-MODE :bin EXE :install CMD).
 EXE is the executable to look for on `PATH'; CMD is the shell command
 (as a list of strings) used to install it if missing. `clangd' (C/C++)
@@ -53,34 +59,38 @@ is deliberately left out: it's normally best installed via your
 system's package manager, e.g. `dnf install clang-tools-extra'.")
 
 (defun my/eglot-maybe-install-and-ensure ()
-  "Install this buffer's default LSP server if missing, then start Eglot."
-  (let* ((spec (alist-get major-mode my/lsp-server-specs))
-         (exe (plist-get spec :bin))
-         (install-cmd (plist-get spec :install)))
-    (cond
-     ;; No spec for this mode: just let Eglot try its own defaults.
-     ((not spec) (eglot-ensure))
-     ((executable-find exe) (eglot-ensure))
-     (t
-      (when (y-or-n-p (format "Language server `%s' not found. Install now via `%s'? "
-                               exe (string-join install-cmd " ")))
-        (let ((buf (current-buffer))
-              (out (get-buffer-create "*lsp-install*")))
-          (message "Installing %s ..." exe)
-          (make-process
-           :name (format "lsp-install-%s" exe)
-           :buffer out
-           :command install-cmd
-           :sentinel
-           (lambda (proc _event)
-             (when (memq (process-status proc) '(exit signal))
-               (if (zerop (process-exit-status proc))
-                   (progn
-                     (message "Installed %s successfully." exe)
-                     (when (buffer-live-p buf)
-                       (with-current-buffer buf (eglot-ensure))))
-                 (message "Failed to install %s -- see the *lsp-install* buffer for details."
-                          exe)))))))))))
+  "Install this buffer's default LSP server if missing, then start Eglot.
+Wrapped so that any hiccup here (declined prompt, network issue, or
+running inside a nested/embedded major mode such as `web-mode''s
+submodes) can never abort the surrounding major-mode setup."
+  (with-demoted-errors "Eglot auto-install: %S"
+    (let* ((spec (alist-get major-mode my/lsp-server-specs))
+           (exe (plist-get spec :bin))
+           (install-cmd (plist-get spec :install)))
+      (cond
+       ;; No spec for this mode: just let Eglot try its own defaults.
+       ((not spec) (eglot-ensure))
+       ((executable-find exe) (eglot-ensure))
+       (t
+        (when (y-or-n-p (format "Language server `%s' not found. Install now via `%s'? "
+                                 exe (string-join install-cmd " ")))
+          (let ((buf (current-buffer))
+                (out (get-buffer-create "*lsp-install*")))
+            (message "Installing %s ..." exe)
+            (make-process
+             :name (format "lsp-install-%s" exe)
+             :buffer out
+             :command install-cmd
+             :sentinel
+             (lambda (proc _event)
+               (when (memq (process-status proc) '(exit signal))
+                 (if (zerop (process-exit-status proc))
+                     (progn
+                       (message "Installed %s successfully." exe)
+                       (when (buffer-live-p buf)
+                         (with-current-buffer buf (eglot-ensure))))
+                   (message "Failed to install %s -- see the *lsp-install* buffer for details."
+                            exe))))))))))))
 
 (dolist (mode (mapcar #'car my/lsp-server-specs))
   (add-hook (intern (concat (symbol-name mode) "-hook"))
