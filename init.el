@@ -76,6 +76,10 @@
 (add-to-list 'load-path (expand-file-name "modules" user-emacs-directory))
 
 (require 'init-magit)
+(require 'init-prog)
+(require 'init-completion)
+(require 'init-treesit)
+(require 'init-eglot)
 
 (provide 'init)
 ;;; init.el ends here
