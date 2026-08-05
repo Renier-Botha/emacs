@@ -1,0 +1,21 @@
+# Everything Emacs/no-littering generates at runtime lives here.
+/var/
+/etc/
+/elpa/
+/eln-cache/
+/auto-save-list/
+/.cache/
+
+# Byte-compiled / native-compiled files anywhere in the tree.
+*.elc
+*.eln
+
+# Backup / autosave / lock files, just in case something writes them
+# outside of var/ (e.g. before no-littering kicks in).
+*~
+\#*\#
+.\#*
+
+# Local machine-specific overrides, not meant to be committed.
+custom.el
+local.el
