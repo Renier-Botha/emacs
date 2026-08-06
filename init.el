@@ -78,10 +78,12 @@
 (require 'init-magit)
 (require 'init-prog)
 (require 'init-completion)
+(require 'init-minibuffer)
 (require 'init-navigation)
 (require 'init-langs)
 (require 'init-treesit)
 (require 'init-eglot)
+(require 'init-evil)
 
 (provide 'init)
 ;;; init.el ends here
