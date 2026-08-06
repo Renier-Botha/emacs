@@ -44,7 +44,17 @@
     :prefix "SPC"
     :global-prefix "C-SPC")
 
+  (defun my/open-terminal-below ()
+    "Open a terminal in a horizontal split below the current window."
+    (interactive)
+    (split-window-below)
+    (other-window 1)
+    (term (or explicit-shell-file-name (getenv "SHELL") "/bin/sh")))
+
   (my/leader-def
+    "o" '(:ignore t :which-key "open")
+    "ot" '(my/open-terminal-below :which-key "terminal below")
+
     "b" '(:ignore t :which-key "buffer")
     "bb" '(consult-buffer :which-key "switch buffer")
     "bd" '(kill-current-buffer :which-key "kill buffer")
