@@ -6,6 +6,11 @@
 /auto-save-list/
 /.cache/
 
+# Compiled tree-sitter grammars (treesit-install-language-grammar's
+# default install location). Machine-specific binaries, rebuilt on
+# demand by treesit-auto; never meant to be committed.
+/tree-sitter/
+
 # Byte-compiled / native-compiled files anywhere in the tree.
 *.elc
 *.eln
