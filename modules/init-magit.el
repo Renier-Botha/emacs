@@ -22,7 +22,10 @@
   ;; Refresh the markers after Magit operations (commit, stage, etc.)
   ;; since those don't otherwise trigger `after-save-hook'.
   (add-hook 'magit-pre-refresh-hook #'diff-hl-magit-pre-refresh)
-  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh))
+  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
+  ;; `global-diff-hl-mode' only covers file-visiting buffers; Dired
+  ;; needs its own minor mode to show per-file status in the margin.
+  (add-hook 'dired-mode-hook #'diff-hl-dired-mode))
 
 (provide 'init-magit)
 ;;; init-magit.el ends here
