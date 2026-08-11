@@ -83,7 +83,7 @@
 (require 'init-langs)
 (require 'init-treesit)
 (require 'init-eglot)
-(require 'init-evil)
+(require 'init-keybindings)
 
 (provide 'init)
 ;;; init.el ends here
