@@ -39,7 +39,15 @@
                    term-mode
                    eshell-mode
                    vterm-mode))
-    (evil-set-initial-state mode 'emacs)))
+    (evil-set-initial-state mode 'emacs))
+
+  ;; `term-mode' uses `C-c' as its "escape to Emacs" prefix by default
+  ;; (e.g. `C-c b' to switch buffers), which shadows the shell's own use
+  ;; of `C-c' (e.g. SIGINT). Use `C-x' as the escape prefix instead, so
+  ;; regular Emacs `C-x ...' commands work in the terminal and `C-c' is
+  ;; passed straight through to the shell.
+  (with-eval-after-load 'term
+    (term-set-escape-char ?\C-x)))
 
 (use-package which-key
   :demand t
