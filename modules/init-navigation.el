@@ -28,5 +28,14 @@
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref))
 
+(use-package avy
+  :bind (("C-'"   . avy-goto-char-timer)
+         ("M-g w" . avy-goto-word-1)
+         ("M-g W" . avy-goto-word-2)
+         ("M-g l" . avy-goto-line))
+  :custom
+  (avy-timeout-seconds 0.3)
+  (avy-style 'at-full))
+
 (provide 'init-navigation)
 ;;; init-navigation.el ends here

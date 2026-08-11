@@ -65,7 +65,13 @@
 
     "s" '(:ignore t :which-key "search")
     "sl" '(consult-line :which-key "search line")
-    "sg" '(consult-ripgrep :which-key "ripgrep")))
+    "sg" '(consult-ripgrep :which-key "ripgrep")
+
+    "j" '(:ignore t :which-key "jump")
+    "jj" '(avy-goto-char-timer :which-key "jump to char")
+    "jw" '(avy-goto-word-1 :which-key "jump to word (1 char)")
+    "jW" '(avy-goto-word-2 :which-key "jump to word (2 chars)")
+    "jl" '(avy-goto-line :which-key "jump to line")))
 
 (provide 'init-keybindings)
 ;;; init-keybindings.el ends here
