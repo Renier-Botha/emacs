@@ -1,8 +1,9 @@
 ;;; init-evil.el --- Vim-style modal editing -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; - evil: Vim emulation for Emacs.
-;; - evil-collection: Evil bindings for many built-in and third-party modes.
+;; - evil: Vim emulation for Emacs, used only for normal file editing.
+;;   Modes like Dired, Magit, and terminals are explicitly kept in Emacs
+;;   state so they behave with their native (non-Vim) keybindings.
 ;; - which-key: pop-up hints for incomplete key sequences.
 ;; - general: convenient key-binding definer, used here to set up a
 ;;   SPC-prefixed leader key (like Vim/Doom/Spacemacs).
@@ -19,15 +20,26 @@
         evil-undo-system 'undo-redo
         evil-search-module 'evil-search)
   :config
-  (evil-mode 1))
+  (evil-mode 1)
 
-(use-package evil-collection
-  :after evil
-  :demand t
-  :custom
-  (evil-collection-setup-minibuffer t)
-  :config
-  (evil-collection-init))
+  ;; Keep Vim bindings for regular file editing only. Dired, Magit, and
+  ;; terminal/shell modes use their own native keybindings (Emacs state).
+  ;;
+  ;; Evil follows each mode's `derived-mode-parent' chain, so setting the
+  ;; state on a base/parent mode automatically covers everything derived
+  ;; from it (e.g. `magit-mode' covers magit-status-mode, magit-log-mode,
+  ;; magit-diff-mode, etc.; `comint-mode' covers shell-mode and friends).
+  ;; Modes that aren't defined with `define-derived-mode' (e.g. minor
+  ;; modes like `git-commit-mode', or modes that set `major-mode'
+  ;; directly) still need to be listed explicitly.
+  (dolist (mode '(dired-mode
+                   magit-mode
+                   git-commit-mode
+                   comint-mode
+                   term-mode
+                   eshell-mode
+                   vterm-mode))
+    (evil-set-initial-state mode 'emacs)))
 
 (use-package which-key
   :demand t
