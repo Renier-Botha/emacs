@@ -81,7 +81,6 @@
 (require 'init-minibuffer)
 (require 'init-navigation)
 (require 'init-multiple-cursors)
-(require 'init-dired-sidebar)
 (require 'init-langs)
 (require 'init-treesit)
 (require 'init-eglot)
