@@ -71,7 +71,14 @@
     "jj" '(avy-goto-char-timer :which-key "jump to char")
     "jw" '(avy-goto-word-1 :which-key "jump to word (1 char)")
     "jW" '(avy-goto-word-2 :which-key "jump to word (2 chars)")
-    "jl" '(avy-goto-line :which-key "jump to line")))
+    "jl" '(avy-goto-line :which-key "jump to line")
+
+    "m" '(:ignore t :which-key "multiple-cursors")
+    "mn" '(mc/mark-next-like-this :which-key "mark next like this")
+    "mp" '(mc/mark-previous-like-this :which-key "mark previous like this")
+    "ma" '(mc/mark-all-like-this :which-key "mark all like this")
+    "md" '(mc/mark-all-dwim :which-key "mark all dwim")
+    "ml" '(mc/edit-lines :which-key "edit lines")))
 
 (provide 'init-keybindings)
 ;;; init-keybindings.el ends here

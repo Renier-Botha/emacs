@@ -80,6 +80,7 @@
 (require 'init-completion)
 (require 'init-minibuffer)
 (require 'init-navigation)
+(require 'init-multiple-cursors)
 (require 'init-langs)
 (require 'init-treesit)
 (require 'init-eglot)
