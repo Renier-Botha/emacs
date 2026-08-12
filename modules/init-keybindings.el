@@ -41,6 +41,7 @@
   (my/leader-def
     "o" '(:ignore t :which-key "open")
     "ot" '(my/open-terminal-below :which-key "terminal below")
+    "oe" '(dired-sidebar-toggle-sidebar :which-key "file explorer")
 
     "b" '(:ignore t :which-key "buffer")
     "bb" '(consult-buffer :which-key "switch buffer")
