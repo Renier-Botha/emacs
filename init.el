@@ -85,6 +85,7 @@
 (require 'init-treesit)
 (require 'init-eglot)
 (require 'init-keybindings)
+(require 'init-clipboard)
 
 (provide 'init)
 ;;; init.el ends here
