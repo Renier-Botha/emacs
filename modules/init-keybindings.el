@@ -1,13 +1,5 @@
 ;;; init-keybindings.el --- Leader-key bindings (no Vim emulation) -*- lexical-binding: t; -*-
 
-;;; Commentary:
-;; - which-key: pop-up hints for incomplete key sequences.
-;; - general: convenient key-binding definer, used here to set up a
-;;   `C-c'-prefixed leader key for common commands.
-;;
-;; Vim/Evil emulation has been removed entirely. Editing uses plain
-;; Emacs keybindings everywhere (files, Dired, Magit, terminal, etc).
-
 ;;; Code:
 
 (use-package which-key
@@ -30,11 +22,6 @@
     (other-window 1)
     (term (or explicit-shell-file-name (getenv "SHELL") "/bin/sh")))
 
-  ;; `term-mode' uses `C-c' as its "escape to Emacs" prefix by default
-  ;; (e.g. `C-c b' to switch buffers), which shadows the shell's own use
-  ;; of `C-c' (e.g. SIGINT). Use `C-x' as the escape prefix instead, so
-  ;; regular Emacs `C-x ...' commands work in the terminal and `C-c' is
-  ;; passed straight through to the shell.
   (with-eval-after-load 'term
     (term-set-escape-char ?\C-x))
 

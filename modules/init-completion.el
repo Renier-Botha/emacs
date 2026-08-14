@@ -1,10 +1,5 @@
 ;;; init-completion.el --- Fast in-buffer completion -*- lexical-binding: t; -*-
 
-;;; Commentary:
-;; Corfu is a small, fast, non-intrusive completion-at-point UI. It
-;; works great together with Eglot (which supplies completions via the
-;; standard `completion-at-point-functions' machinery, no glue needed).
-
 ;;; Code:
 
 (use-package corfu
@@ -17,7 +12,6 @@
   :config
   (global-corfu-mode))
 
-;; Better fuzzy/out-of-order matching for completion candidates.
 (use-package orderless
   :demand t
   :custom

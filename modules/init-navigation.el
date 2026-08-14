@@ -1,8 +1,5 @@
 ;;; init-navigation.el --- Consult -*- lexical-binding: t; -*-
 
-;;; Commentary:
-;; - consult: enhanced search/navigation commands (buffers, grep, lines...).
-
 ;;; Code:
 
 (use-package consult
@@ -21,7 +18,6 @@
          ("M-s" . consult-history)
          ("M-r" . consult-history))
   :custom
-  ;; Don't preview expensive commands automatically.
   (consult-preview-key 'any)
   (register-preview-function #'consult-register-format)
   :init
