@@ -1,0 +1,109 @@
+#+TITLE: init-navigation.el — Consult and Avy
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Configures enhanced search/navigation commands: ~consult~ for
+buffer/line/grep/xref navigation, and ~avy~ for jumping directly to a
+visible character/word/line on screen.
+
+* Walkthrough
+
+** Consult
+
+#+begin_src emacs-lisp
+(use-package consult
+  :bind (("C-x b"   . consult-buffer)
+         ("C-x 4 b" . consult-buffer-other-window)
+         ("C-x p b" . consult-project-buffer)
+         ("M-y"     . consult-yank-pop)
+         ("M-g g"   . consult-goto-line)
+         ("M-g M-g" . consult-goto-line)
+         ("M-g i"   . consult-imenu)
+         ("M-g o"   . consult-outline)
+         ("M-s l"   . consult-line)
+         ("M-s g"   . consult-ripgrep)
+         ("M-s f"   . consult-find)
+         :map minibuffer-local-map
+         ("M-s" . consult-history)
+         ("M-r" . consult-history))
+  :custom
+  (consult-preview-key 'any)
+  (register-preview-function #'consult-register-format)
+  :init
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref))
+#+end_src
+
+[[https://github.com/minad/consult][Consult]] replaces or augments a
+number of built-in commands with enhanced, often live-previewed,
+equivalents:
+- ~C-x b~ / ~C-x 4 b~ / ~C-x p b~: switch buffer (current window,
+  other window, project-scoped), replacing the default
+  ~switch-to-buffer~ family with an enhanced, annotated, previewable
+  version.
+- ~M-y~: browse and pick from kill-ring history (~consult-yank-pop~)
+  instead of just cycling blindly with repeated ~M-y~.
+- ~M-g g~ / ~M-g M-g~: go to line by number.
+- ~M-g i~: jump to a definition via Imenu, with live preview.
+- ~M-g o~: jump to a heading via Outline.
+- ~M-s l~: fuzzy-search visible lines in the current buffer.
+- ~M-s g~: ripgrep search across the project/directory, with live
+  preview of matches.
+- ~M-s f~: find files by name.
+- Inside the minibuffer itself (~minibuffer-local-map~), ~M-s~/~M-r~
+  are bound to browse minibuffer history interactively.
+
+Custom settings:
+- ~consult-preview-key~ set to ~'any~: preview the candidate under
+  point on *any* keypress/movement while browsing (rather than
+  requiring an explicit preview key), so results are always visible
+  live -- but see the note below on expensive commands.
+- ~register-preview-function~ set to Consult's formatter, so register
+  previews (e.g. ~C-x r j~) look consistent with the rest of the
+  Consult UI.
+- In ~:init~ (i.e. before Consult itself is necessarily loaded),
+  ~xref-show-xrefs-function~ and ~xref-show-definitions-function~ are
+  redirected to ~consult-xref~, so that ~xref-find-definitions~/
+  ~xref-find-references~ (used by Eglot, see ~init-eglot.el~ and the
+  ~C-c c d~/~C-c c r~ leader bindings) show their results through
+  Consult's UI instead of the default xref buffer.
+
+** Avy
+
+#+begin_src emacs-lisp
+(use-package avy
+  :bind (("C-'"   . avy-goto-char-timer)
+         ("M-g w" . avy-goto-word-1)
+         ("M-g W" . avy-goto-word-2)
+         ("M-g l" . avy-goto-line))
+  :custom
+  (avy-timeout-seconds 0.3)
+  (avy-style 'at-full))
+#+end_src
+
+[[https://github.com/abo-abo/avy][Avy]] lets you jump directly to any
+visible character/word/line by typing a short sequence and then
+selecting from overlayed hint labels -- much faster than repeated
+cursor movement for on-screen jumps.
+- ~C-'~: jump to a character, typed with a timeout (so you can type
+  more than one character to narrow down matches before avy shows
+  labels).
+- ~M-g w~ / ~M-g W~: jump to a word, matching on its first
+  1 or 2 characters respectively.
+- ~M-g l~: jump to the start of a visible line.
+- ~avy-timeout-seconds~: how long avy waits for more input before
+  treating what's typed so far as final and showing the hint labels.
+- ~avy-style~ set to ~'at-full~: hint labels are overlayed directly
+  on/replacing the matched text (rather than e.g. before it),
+  covering the full match.
+
+These same commands are also reachable through the leader key (~C-c
+j ...~), see ~init-keybindings.el~.
+
+* Summary
+
+| Package | Role                                                             |
+|---------+---------------------------------------------------------------------|
+| consult | Enhanced buffer/line/grep/xref/history navigation with preview  |
+| avy     | Jump directly to a visible char/word/line via hint labels        |

@@ -1,0 +1,82 @@
+#+TITLE: init-clipboard.el — System clipboard integration
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Makes the normal kill-ring commands (~M-w~, ~C-w~, ~C-y~/~yank~) read
+from and write to the system clipboard, in addition to the regular
+Emacs kill-ring, in both GUI and terminal Emacs.
+
+* Walkthrough
+
+** GUI clipboard integration
+
+#+begin_src emacs-lisp
+(setq select-enable-clipboard t
+      select-enable-primary t)
+#+end_src
+
+In GUI Emacs, clipboard integration already works out of the box via
+window-system selection support, but these two variables are set
+explicitly anyway so behaviour is guaranteed rather than relying on
+defaults that could change:
+- ~select-enable-clipboard~: kill-ring operations also read/write the
+  "CLIPBOARD" selection (the one used by ~Ctrl-C~/~Ctrl-V~ in most
+  GUI apps).
+- ~select-enable-primary~: kill-ring operations also read/write the
+  X11 "PRIMARY" selection (the one populated by just selecting text
+  with the mouse, pasted with middle-click).
+
+** Terminal clipboard bridge
+
+#+begin_src emacs-lisp
+(use-package xclip
+  :unless (display-graphic-p)
+  :demand t
+  :config
+  (xclip-mode 1))
+#+end_src
+
+In terminal Emacs (~emacs -nw~), Emacs has no direct way to talk to
+the system clipboard -- there's no window-system selection mechanism
+to hook into. The [[https://github.com/emacsmirror/xclip][xclip]]
+package works around this by shelling out to an external clipboard
+tool (whichever of ~xclip~/~xsel~/~wl-copy~/~pbcopy~/~termux-clipboard~
+is available on the system) to bridge the Emacs kill-ring and the
+system clipboard.
+
+~:unless (display-graphic-p)~ means this package (and its mode) is
+only loaded/enabled when Emacs is *not* running under a GUI, since
+it's unnecessary (and would be redundant) in that case.
+
+** Explicit leader-key clipboard commands
+
+#+begin_src emacs-lisp
+(my/leader-def
+  "y" '(:ignore t :which-key "clipboard")
+  "yy" '(clipboard-kill-ring-save :which-key "copy to clipboard")
+  "yw" '(clipboard-kill-region :which-key "cut to clipboard")
+  "yp" '(clipboard-yank :which-key "paste from clipboard"))
+#+end_src
+
+As a belt-and-braces fallback (in case ~select-enable-clipboard~
+doesn't do what's wanted in some edge case, or xclip isn't available
+for some reason), explicit "always use the clipboard" commands are
+bound under the leader key (~C-c y ...~), using Emacs's built-in
+~clipboard-*~ commands. These bypass ~select-enable-clipboard~
+entirely and always talk to the system clipboard directly:
+- ~C-c y y~ → ~clipboard-kill-ring-save~ (copy)
+- ~C-c y w~ → ~clipboard-kill-region~ (cut)
+- ~C-c y p~ → ~clipboard-yank~ (paste)
+
+This module relies on ~my/leader-def~ and ~general.el~ already being
+set up by ~init-keybindings.el~, which is why ~init.el~ requires
+~init-keybindings~ *before* ~init-clipboard~.
+
+* Summary
+
+| Context           | Mechanism                                             |
+|-------------------+--------------------------------------------------------|
+| GUI Emacs         | Native window-system selection (CLIPBOARD + PRIMARY)  |
+| Terminal Emacs    | xclip.el shells out to xclip/xsel/wl-copy/pbcopy/etc. |
+| Explicit fallback | ~C-c y y/w/p~ bound to built-in ~clipboard-*~ commands  |

@@ -1,0 +1,169 @@
+#+TITLE: init-keybindings.el — Leader-key bindings (no Vim emulation)
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Sets up a Spacemacs/Doom-style "leader key" bindings scheme, without
+any Vim/Evil emulation. All editing uses plain Emacs keybindings
+everywhere (files, Dired, Magit, terminal, etc.) -- this module just
+adds a convenient, discoverable, mnemonic set of shortcuts under
+~C-c~ for commands that are used often.
+
+Two packages make this possible:
+- [[https://github.com/justbur/emacs-which-key][which-key]]: shows a
+  pop-up with hints for available completions of an in-progress key
+  sequence (e.g. after pressing ~C-c~, a menu of what ~C-c <key>~
+  does appears).
+- [[https://github.com/noctuid/general.el][general.el]]: a convenient
+  key-binding definer, used here to build a ~C-c~-prefixed "leader"
+  key with nested, mnemonic sub-prefixes (~C-c f~ for file commands,
+  ~C-c b~ for buffer commands, etc.)
+
+* Walkthrough
+
+** which-key
+
+#+begin_src emacs-lisp
+(use-package which-key
+  :demand t
+  :config
+  (which-key-mode 1))
+#+end_src
+
+Simple: install and turn on globally. From here on, any incomplete
+key sequence will show a popup of possible continuations after a
+short delay.
+
+** general.el and the leader-key definer
+
+#+begin_src emacs-lisp
+(use-package general
+  :demand t
+  :config
+  (general-create-definer my/leader-def
+    :keymaps 'override
+    :prefix "C-c"
+    :global-prefix "C-c")
+  ...)
+#+end_src
+
+~general-create-definer~ creates a new macro, ~my/leader-def~, that
+binds keys under the ~C-c~ prefix globally (~:keymaps 'override~ means
+these bindings take priority over other minor/major mode maps that
+might also try to claim the same key sequence). Other modules (e.g.
+~init-clipboard.el~) can call ~my/leader-def~ to add their own
+leader-prefixed bindings, as long as they're loaded after this file.
+
+** Terminal escape key remap
+
+#+begin_src emacs-lisp
+(defun my/open-terminal-below ()
+  "Open a terminal in a horizontal split below the current window."
+  (interactive)
+  (split-window-below)
+  (other-window 1)
+  (term (or explicit-shell-file-name (getenv "SHELL") "/bin/sh")))
+
+(with-eval-after-load 'term
+  (term-set-escape-char ?\C-x))
+#+end_src
+
+~my/open-terminal-below~ is a small convenience command that splits
+the current window horizontally and opens ~term-mode~ in the new,
+lower window, using the user's preferred shell (falling back through
+~explicit-shell-file-name~, the ~SHELL~ environment variable, then
+~/bin/sh~).
+
+~term-mode~ uses ~C-c~ as its "escape to Emacs" prefix by default
+(e.g. ~C-c b~ to switch buffers from within the terminal), which
+shadows the shell's own use of ~C-c~ (most importantly, sending
+SIGINT to interrupt a running program). Since this module has already
+claimed ~C-c~ globally as the leader key, that conflict is doubly
+important to resolve: ~term-set-escape-char~ is used to switch the
+escape prefix to ~C-x~ instead, so:
+- regular Emacs ~C-x ...~ commands still work while inside the
+  terminal, and
+- ~C-c~ is passed straight through to the shell/program running in
+  the terminal, restoring normal SIGINT behaviour.
+
+** The leader-key bindings themselves
+
+#+begin_src emacs-lisp
+(my/leader-def
+  "o" '(:ignore t :which-key "open")
+  "ot" '(my/open-terminal-below :which-key "terminal below")
+
+  "b" '(:ignore t :which-key "buffer")
+  "bb" '(consult-buffer :which-key "switch buffer")
+  "bd" '(kill-current-buffer :which-key "kill buffer")
+
+  "f" '(:ignore t :which-key "file")
+  "ff" '(find-file :which-key "find file")
+  "fs" '(save-buffer :which-key "save file")
+
+  "g" '(:ignore t :which-key "git")
+  "gs" '(magit-status :which-key "status")
+
+  "c" '(:ignore t :which-key "code")
+  "cd" '(xref-find-definitions :which-key "find definitions")
+  "cr" '(xref-find-references :which-key "find references")
+  "ca" '(eglot-code-actions :which-key "code actions")
+  "cn" '(eglot-rename :which-key "rename")
+  "cf" '(eglot-format :which-key "format")
+
+  "p" '(:ignore t :which-key "project")
+  "pf" '(project-find-file :which-key "find file in project")
+
+  "s" '(:ignore t :which-key "search")
+  "sl" '(consult-line :which-key "search line")
+  "sg" '(consult-ripgrep :which-key "ripgrep")
+
+  "j" '(:ignore t :which-key "jump")
+  "jj" '(avy-goto-char-timer :which-key "jump to char")
+  "jw" '(avy-goto-word-1 :which-key "jump to word (1 char)")
+  "jW" '(avy-goto-word-2 :which-key "jump to word (2 chars)")
+  "jl" '(avy-goto-line :which-key "jump to line")
+
+  "m" '(:ignore t :which-key "multiple-cursors")
+  "mn" '(mc/mark-next-like-this :which-key "mark next like this")
+  "mp" '(mc/mark-previous-like-this :which-key "mark previous like this")
+  "ma" '(mc/mark-all-like-this :which-key "mark all like this")
+  "md" '(mc/mark-all-dwim :which-key "mark all dwim")
+  "ml" '(mc/edit-lines :which-key "edit lines"))
+#+end_src
+
+Each top-level letter (~o~, ~b~, ~f~, ~g~, ~c~, ~p~, ~s~, ~j~, ~m~) is
+a mnemonic category, bound to ~:ignore t~ with a ~:which-key~ label
+so pressing e.g. ~C-c b~ alone shows a which-key popup of buffer
+commands rather than doing anything itself. Sub-keys under each
+category run the actual command:
+
+| Prefix    | Category         | Sub-keys → commands                                            |
+|-----------+------------------+-------------------------------------------------------------------|
+| ~C-c o~   | open             | ~t~ open terminal below                                          |
+| ~C-c b~   | buffer           | ~b~ switch buffer (consult), ~d~ kill current buffer              |
+| ~C-c f~   | file             | ~f~ find file, ~s~ save file                                     |
+| ~C-c g~   | git              | ~s~ magit-status                                                 |
+| ~C-c c~   | code             | ~d~ definitions, ~r~ references, ~a~ actions, ~n~ rename, ~f~ format |
+| ~C-c p~   | project          | ~f~ find file in project                                          |
+| ~C-c s~   | search           | ~l~ search line, ~g~ ripgrep                                     |
+| ~C-c j~   | jump (avy)       | ~j~/~w~/~W~/~l~ jump to char/word(1)/word(2)/line                 |
+| ~C-c m~   | multiple-cursors | ~n~/~p~/~a~/~d~/~l~ next/prev/all/dwim/edit-lines                |
+
+Most of these commands come from other modules (Consult from
+~init-navigation.el~, Eglot/xref from ~init-eglot.el~, Avy from
+~init-navigation.el~, multiple-cursors from
+~init-multiple-cursors.el~, Magit from ~init-magit.el~) -- this
+module doesn't define the underlying functionality, just gives it a
+consistent, discoverable keybinding surface.
+
+* Summary
+
+| Package | Role                                                          |
+|---------+-----------------------------------------------------------------|
+| which-key | Discoverability popup for incomplete key sequences            |
+| general   | Defines the ~C-c~ leader-key definer (~my/leader-def~)         |
+
+Plus: a helper command for opening a terminal split, a fix for
+~term-mode~'s escape-char conflict with the leader key, and the full
+leader-key binding table itself.

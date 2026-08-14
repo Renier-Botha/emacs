@@ -1,0 +1,98 @@
+#+TITLE: init-minibuffer.el — Vertico-based minibuffer completion
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Configures a modern minibuffer-completion stack: a vertical
+completion UI, rich annotations, and contextual actions on
+completion candidates. Together with ~orderless~ (from
+~init-completion.el~) and ~consult~ (from ~init-navigation.el~), this
+forms a full Vertico + Orderless + Consult + Marginalia + Embark
+stack.
+
+* Walkthrough
+
+** Vertico
+
+#+begin_src emacs-lisp
+(use-package vertico
+  :demand t
+  :custom
+  (vertico-cycle t)
+  :config
+  (vertico-mode 1))
+#+end_src
+
+[[https://github.com/minad/vertico][Vertico]] provides a vertical
+completion UI for the minibuffer -- candidates for any completing-read
+prompt (find-file, M-x, switch buffer, etc.) are shown one per line
+in a list below the minibuffer, instead of the default horizontal
+"*Completions*" buffer layout.
+- ~vertico-cycle~: wrap around from the last candidate to the first
+  (and vice versa) when moving through the candidate list.
+
+** Marginalia
+
+#+begin_src emacs-lisp
+(use-package marginalia
+  :demand t
+  :config
+  (marginalia-mode 1))
+#+end_src
+
+[[https://github.com/minad/marginalia][Marginalia]] adds rich
+annotations (docstrings for commands, file sizes/permissions for
+files, key bindings, etc.) alongside each candidate shown by Vertico,
+without needing any special integration -- it hooks into the standard
+completion machinery.
+
+** Embark
+
+#+begin_src emacs-lisp
+(use-package embark
+  :bind (("C-." . embark-act)
+         ("C-;" . embark-dwim)
+         ("C-h B" . embark-bindings))
+  :custom
+  (prefix-help-command #'embark-prefix-help-command))
+#+end_src
+
+[[https://github.com/oantolin/embark][Embark]] provides contextual
+actions on "the thing at point" or on the currently-selected
+minibuffer candidate -- conceptually like a keyboard-driven
+"right-click context menu."
+- ~C-.~ → ~embark-act~: show available actions for the thing at
+  point/minibuffer candidate.
+- ~C-;~ → ~embark-dwim~: perform the most likely ("do what I mean")
+  action directly, without the selection menu.
+- ~C-h B~ → ~embark-bindings~: show all bindings reachable from here.
+- ~prefix-help-command~ is set to ~embark-prefix-help-command~ so
+  that pressing a prefix key and then requesting help (e.g. ~C-x
+  C-h~) shows an Embark-powered, actionable list of bindings, instead
+  of just popping up the default (non-interactive) ~*Completions*~
+  buffer as a target selector.
+
+** embark-consult
+
+#+begin_src emacs-lisp
+(use-package embark-consult
+  :after (embark consult)
+  :demand t
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+#+end_src
+
+~embark-consult~ adds Embark support specifically for Consult's
+collections (e.g. previewing a grep result, or exporting Embark's
+candidate collection into a proper ~grep-mode~ buffer for further
+editing). The ~:hook~ enables live preview-at-point when browsing an
+Embark collect buffer, so moving through candidates previews them
+without needing to jump to each one explicitly.
+
+* Summary
+
+| Package        | Role                                                          |
+|-----------------+------------------------------------------------------------------|
+| vertico         | Vertical completion UI for the minibuffer                     |
+| marginalia      | Rich annotations next to completion candidates                |
+| embark          | Contextual actions on the thing at point / candidate          |
+| embark-consult  | Embark integration with Consult's collections (grep, etc.)    |

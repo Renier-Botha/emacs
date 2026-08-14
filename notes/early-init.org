@@ -1,0 +1,104 @@
+#+TITLE: early-init.el — Early startup tweaks
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+~early-init.el~ is loaded by Emacs (27+) /before/ ~init.el~, and
+before package.el initializes, frame creation, or theme/UI setup.
+This makes it the right place to disable or defer anything that
+slows down or affects early startup, since changes made later (in
+~init.el~) can't undo work Emacs already did based on stale defaults.
+
+* Walkthrough
+
+** Skip the site-wide startup file
+
+#+begin_src emacs-lisp
+(setq site-run-file nil)
+#+end_src
+
+Many systems install a ~site-start.el~ that runs extra setup for all
+users of that machine. It's usually irrelevant to a personal
+configuration and only adds startup overhead, so it's disabled here.
+
+** Defer package.el initialization
+
+#+begin_src emacs-lisp
+(setq package-enable-at-startup nil)
+#+end_src
+
+Normally Emacs calls ~package-initialize~ automatically very early in
+startup. Here that's disabled so ~init.el~ can call
+~package-initialize~ explicitly, exactly once, after it has set up
+~package-archives~ the way it wants.
+
+** Avoid frame resize flicker
+
+#+begin_src emacs-lisp
+(setq frame-inhibit-implied-resize t)
+#+end_src
+
+Without this, Emacs may resize the frame every time a font, theme,
+or other frame parameter changes during startup, which can cause
+visible flicker/jank.
+
+** Raise the GC threshold during startup
+
+#+begin_src emacs-lisp
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)
+#+end_src
+
+Garbage collection during startup (which allocates a lot of
+short-lived data: parsing package metadata, loading many files, etc.)
+can be a meaningful chunk of startup time. Setting the threshold as
+high as possible effectively disables GC until we choose to restore
+a sane value. That restoration happens in ~init.el~, in an
+~emacs-startup-hook~, once startup has finished.
+
+** Disable ~file-name-handler-alist~ during startup
+
+#+begin_src emacs-lisp
+(defvar my/file-name-handler-alist-backup file-name-handler-alist)
+(setq file-name-handler-alist nil)
+#+end_src
+
+~file-name-handler-alist~ is consulted on every file operation to
+check for special handling (TRAMP remote paths, compressed files via
+jka-compr, etc.). Since none of that applies while loading local
+~.el~ files at startup, temporarily clearing it removes overhead from
+every single ~require~/~load~ call. The original value is saved to
+~my/file-name-handler-alist-backup~ so it can be restored later (again,
+in the ~emacs-startup-hook~ in ~init.el~) -- otherwise things like
+opening remote files over TRAMP would silently stop working after
+startup.
+
+** Keep the UI minimal from the very first frame
+
+#+begin_src emacs-lisp
+(push '(menu-bar-lines . 0) default-frame-alist)
+(push '(tool-bar-lines . 0) default-frame-alist)
+(push '(vertical-scroll-bars) default-frame-alist)
+#+end_src
+
+~init.el~ also disables the menu bar, tool bar, and scroll bars (via
+~menu-bar-mode~, ~tool-bar-mode~, ~scroll-bar-mode~), but that happens
+after the first frame is already created and visible. Setting these
+in ~default-frame-alist~ here means the very first frame is created
+without those UI elements in the first place, avoiding a brief flash
+where they're visible before being turned off.
+
+* Summary
+
+| Setting                              | Effect                                     |
+|---------------------------------------+---------------------------------------------|
+| ~site-run-file~ = nil                 | Skip system-wide startup file               |
+| ~package-enable-at-startup~ = nil     | Let init.el control package initialization  |
+| ~frame-inhibit-implied-resize~ = t    | Avoid frame resize flicker                  |
+| ~gc-cons-threshold~ raised            | Avoid GC pauses during startup              |
+| ~file-name-handler-alist~ cleared     | Faster file loading during startup          |
+| ~default-frame-alist~ UI bars removed | No flash of menu/tool/scroll bars on launch |
+
+All of the "temporary" settings here (GC threshold, file-name-handler-alist)
+are restored in ~init.el~'s ~emacs-startup-hook~ once Emacs has finished
+starting up.

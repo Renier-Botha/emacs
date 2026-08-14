@@ -1,0 +1,74 @@
+#+TITLE: init-lisp.el — Common Lisp support via SLY
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Adds Common Lisp support using [[https://github.com/joaotavora/sly][SLY]]
+(the actively-maintained successor to SLIME), rather than Eglot/LSP.
+
+* Why not Eglot for Common Lisp
+
+Common Lisp does have an LSP server (~cl-lsp~), but it's effectively
+unmaintained and much weaker than the Lisp-native alternative. SLY
+talks directly to a running Lisp image (via Swank, its RPC protocol)
+and gives you things a generic LSP client fundamentally can't
+replicate as well:
+- a real, interactive REPL wired directly into the buffer you're
+  editing
+- an interactive debugger with restarts (condition system support)
+- live macro-expansion, cross-referencing, and an object inspector
+- the ability to redefine individual functions/classes in a running
+  image without restarting anything
+
+Because of this, Common Lisp is deliberately *not* added to
+~my/lsp-server-specs~ in ~init-eglot.el~ -- it's a separate,
+purpose-built tool instead of another LSP client entry.
+
+* Walkthrough
+
+#+begin_src emacs-lisp
+(use-package sly
+  :commands (sly sly-connect)
+  :init
+  (setq inferior-lisp-program "sbcl"))
+#+end_src
+
+- ~:commands (sly sly-connect)~ means SLY is only actually loaded the
+  first time one of these commands is invoked (~M-x sly~ to start a
+  fresh Lisp + REPL, or ~M-x sly-connect~ to attach to an
+  already-running Swank server) -- there's no need to load it eagerly
+  at startup, since Common Lisp editing is occasional, not constant.
+- ~inferior-lisp-program~ tells SLY which Lisp implementation to
+  launch: [[https://www.sbcl.org/][SBCL]], the most common, actively
+  developed open-source Common Lisp implementation. SBCL itself is
+  *not* installed by this module -- it needs to be installed
+  separately via the system package manager, e.g.:
+
+  #+begin_src sh
+  sudo dnf install sbcl
+  #+end_src
+
+  (mirroring the same reasoning as ~clangd~ in ~init-eglot.el~: a
+  full language runtime/toolchain is better left to the system's own
+  package manager than auto-installed from Emacs.)
+
+** File association
+
+No ~:mode~ declaration is needed here: Emacs's built-in
+~auto-mode-alist~ already maps ~.lisp~, ~.lsp~, and ~.asd~ files to
+the built-in ~lisp-mode~. Once ~sly-mode~ is enabled (which SLY does
+automatically for ~lisp-mode~ buffers after being loaded), all of
+SLY's REPL/eval/xref/debugger keybindings become available in any
+~.lisp~ buffer.
+
+* Summary
+
+| Piece                    | Role                                                        |
+|---------------------------+-----------------------------------------------------------------|
+| ~use-package sly~         | Installs SLY, lazy-loaded on first ~sly~/~sly-connect~ call     |
+| ~inferior-lisp-program~   | Points SLY at ~sbcl~ (must be installed separately via dnf/etc) |
+| Common Lisp file support  | Handled by Emacs's built-in ~lisp-mode~ / ~auto-mode-alist~     |
+
+Load order note: this module has no dependency on ~init-keybindings~
+or ~init-eglot~, so it's loaded from ~init.el~ right after
+~init-langs~, alongside the other language-support modules.

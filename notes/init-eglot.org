@@ -1,0 +1,175 @@
+#+TITLE: init-eglot.el — LSP support via Eglot, with auto-install of servers
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Configures [[https://www.gnu.org/software/emacs/manual/html_node/eglot/][Eglot]],
+Emacs's built-in Language Server Protocol (LSP) client, and layers a
+small auto-install mechanism on top so that missing language servers
+can be installed on demand instead of failing silently or requiring
+manual setup first.
+
+Eglot ships with Emacs (29+), so it needs no extra package -- just
+configuration. Unlike ~lsp-mode~, Eglot deliberately doesn't know how
+to install language servers for you; that's the gap this module
+fills, in a minimal way.
+
+* Walkthrough
+
+** Base Eglot configuration
+
+#+begin_src emacs-lisp
+(use-package eglot
+  :ensure nil
+  :bind (:map eglot-mode-map
+              ("C-c l r" . eglot-rename)
+              ("C-c l a" . eglot-code-actions)
+              ("C-c l f" . eglot-format))
+  :config
+  (setq eglot-autoshutdown t
+        eglot-report-progress nil
+        eglot-confirm-server-edits nil)
+  (add-to-list 'eglot-server-programs
+               '(svelte-mode . ("svelteserver" "--stdio"))))
+#+end_src
+
+- ~:ensure nil~ because Eglot is built into Emacs; there's nothing to
+  install.
+- Keybindings, active only while Eglot is managing the buffer (via
+  ~eglot-mode-map~):
+  - ~C-c l r~ → rename symbol at point
+  - ~C-c l a~ → show available code actions
+  - ~C-c l f~ → format buffer/region
+- ~eglot-autoshutdown~: kill the language server process automatically
+  once the last buffer using it is closed, instead of leaving it
+  running in the background.
+- ~eglot-report-progress~ disabled: don't show LSP progress
+  notifications in the echo area (reduces noise).
+- ~eglot-confirm-server-edits~ disabled: apply server-suggested edits
+  (e.g. from code actions) without an extra confirmation prompt.
+- Eglot has no built-in entry for Svelte, so one is added manually,
+  pointing at the ~svelteserver~ binary run with ~--stdio~.
+
+** Auto-install helper
+
+The rest of the file adds a layer that, for each major mode listed,
+knows one "default" language server binary to look for and how to
+install it if missing:
+
+#+begin_src emacs-lisp
+(defvar my/lsp-server-specs
+  '((python-mode        :bin "pyright-langserver" :install ("pip" "install" "--user" "pyright"))
+    (python-ts-mode     :bin "pyright-langserver" :install ("pip" "install" "--user" "pyright"))
+    (js-mode            :bin "typescript-language-server" :install (...))
+    (js-ts-mode         :bin "typescript-language-server" :install (...))
+    (typescript-mode    :bin "typescript-language-server" :install (...))
+    (typescript-ts-mode :bin "typescript-language-server" :install (...))
+    (rust-mode          :bin "rust-analyzer" :install ("rustup" "component" "add" "rust-analyzer"))
+    (rust-ts-mode       :bin "rust-analyzer" :install ("rustup" "component" "add" "rust-analyzer"))
+    (go-mode            :bin "gopls" :install ("go" "install" "golang.org/x/tools/gopls@latest"))
+    (go-ts-mode         :bin "gopls" :install ("go" "install" "golang.org/x/tools/gopls@latest"))
+    (svelte-mode        :bin "svelteserver" :install ("npm" "install" "-g" "svelte-language-server"))
+    (clojure-mode        :bin "clojure-lsp" :install (...))
+    (clojurescript-mode  :bin "clojure-lsp" :install (...))
+    (clojurec-mode       :bin "clojure-lsp" :install (...))
+    (clojure-ts-mode     :bin "clojure-lsp" :install (...))))
+#+end_src
+
+Each entry is ~(MAJOR-MODE :bin EXE :install CMD)~, where ~EXE~ is
+the executable name to search for on ~PATH~, and ~CMD~ is the shell
+command (as a list of strings, suitable for ~make-process~) used to
+install it if it's missing.
+
+The four Clojure-related entries (~clojure-mode~,
+~clojurescript-mode~, ~clojurec-mode~, ~clojure-ts-mode~) all point at
+~clojure-lsp~, since there's no Fedora/dnf package for it and no
+single-purpose language package manager (like pip/npm/go/rustup) to
+defer to. Their ~:install~ command runs the official install script
+via ~curl | bash~, placing the ~clojure-lsp~ binary in ~~/.local/bin~
+(assumed to already be on ~PATH~):
+
+#+begin_src sh
+curl -sL https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install \
+  | bash -s -- --dir ~/.local/bin
+#+end_src
+
+Note that Eglot itself (unlike the Svelte case above) already ships a
+built-in ~eglot-server-programs~ entry mapping ~clojure-mode~,
+~clojurescript-mode~, ~clojurec-mode~, and ~clojure-ts-mode~ to
+~clojure-lsp~ -- so nothing needs to be added to
+~eglot-server-programs~ for Clojure, only to ~my/lsp-server-specs~ so
+that this module's auto-install layer knows to check for/install the
+binary.
+
+Note: ~clangd~ (C/C++) is deliberately *not* included here -- it's
+normally best installed via the system's package manager (e.g. ~dnf
+install clang-tools-extra~), rather than via a language-specific
+package manager like pip/npm/go/rustup.
+
+This list only covers the servers explicitly listed -- more entries
+can be added as new languages are picked up. It intentionally does
+NOT try to be a full "mason.nvim"-style universal installer; that's
+`lsp-mode`'s territory and comes with a lot more moving parts.
+
+#+begin_src emacs-lisp
+(defun my/eglot-maybe-install-and-ensure ()
+  (with-demoted-errors "Eglot auto-install: %S"
+    (let* ((spec (alist-get major-mode my/lsp-server-specs))
+           (exe (plist-get spec :bin))
+           (install-cmd (plist-get spec :install)))
+      (cond
+       ((not spec) (eglot-ensure))
+       ((executable-find exe) (eglot-ensure))
+       (t
+        (when (y-or-n-p ...)
+          (make-process ...)))))))
+#+end_src
+
+This function is what actually runs in each configured major mode's
+hook. Its logic:
+1. Look up this buffer's ~major-mode~ in ~my/lsp-server-specs~.
+2. If there's no spec for this mode, just call ~eglot-ensure~ and let
+   Eglot try its own built-in defaults.
+3. If there is a spec and the binary is already found on ~PATH~
+   (~executable-find~), start Eglot immediately -- it will use
+   whatever server it would normally pick, which may not even be the
+   one that would've been installed. That's fine: this layer only
+   exists to bootstrap a *default* server when there is none yet, not
+   to force a specific server.
+4. Otherwise, ask for confirmation (~y-or-n-p~) and, if confirmed,
+   run the install command asynchronously via ~make-process~,
+   streaming its output into a ~*lsp-install*~ buffer. A process
+   sentinel watches for the install command finishing:
+   - on success, it messages and starts Eglot in the original buffer
+     (guarded by ~buffer-live-p~ in case the buffer was killed while
+     installing);
+   - on failure, it just messages, pointing at ~*lsp-install*~ for
+     details.
+
+The whole function body is wrapped in
+~with-demoted-errors~, so that any hiccup here -- a declined prompt,
+a network issue, or running inside a nested/embedded major mode such
+as ~web-mode~'s submodes -- can never abort the surrounding major-mode
+setup (i.e. opening the file itself will never fail because of this
+code).
+
+#+begin_src emacs-lisp
+(dolist (mode (mapcar #'car my/lsp-server-specs))
+  (add-hook (intern (concat (symbol-name mode) "-hook"))
+            #'my/eglot-maybe-install-and-ensure))
+#+end_src
+
+Finally, for every major mode named in ~my/lsp-server-specs~, this
+hooks ~my/eglot-maybe-install-and-ensure~ onto that mode's hook (e.g.
+~python-mode-hook~, ~rust-ts-mode-hook~), so simply opening a
+matching file triggers the whole check/install/start flow described
+above.
+
+* Summary
+
+| Piece                                | Role                                                    |
+|---------------------------------------+----------------------------------------------------------|
+| ~use-package eglot~                   | Core Eglot config, keybindings, Svelte server entry      |
+| ~my/lsp-server-specs~                 | Per-mode default server binary + install command         |
+| ~my/eglot-maybe-install-and-ensure~   | Check/install-if-missing/start Eglot, error-safe          |
+| ~dolist~ hook wiring                  | Runs the above automatically for each listed major mode  |

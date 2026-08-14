@@ -1,0 +1,50 @@
+#+TITLE: init-multiple-cursors.el — Multiple cursors
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Configures [[https://github.com/magnars/multiple-cursors.el][multiple-cursors]],
+which lets you edit several points in a buffer simultaneously. You
+mark occurrences of a word/region (or place one cursor per line),
+and every keystroke you type afterward is replayed at each cursor.
+
+* Walkthrough
+
+#+begin_src emacs-lisp
+(use-package multiple-cursors
+  :bind (("C->"     . mc/mark-next-like-this)
+         ("C-<"     . mc/mark-previous-like-this)
+         ("C-c C->" . mc/mark-all-like-this)
+         ("C-!"     . mc/mark-all-dwim)
+         ("C-c m l" . mc/edit-lines)
+         ("C-c m a" . mc/mark-all-like-this)
+         ("C-c m n" . mc/mark-next-like-this)
+         ("C-c m p" . mc/mark-previous-like-this)))
+#+end_src
+
+Two overlapping sets of bindings are provided:
+- Direct, mnemonic-free bindings matching multiple-cursors' own
+  conventions: ~C->~/~C-<~ to mark the next/previous occurrence like
+  the current selection, ~C-c C->~ to mark all occurrences at once,
+  and ~C-!~ for "mark all, do what I mean" (picks symbol-at-point,
+  region, etc. as appropriate).
+- Leader-key style bindings under ~C-c m~ (mirroring the ~C-c m ...~
+  entries also declared in ~init-keybindings.el~'s
+  ~my/leader-def~ table), so the same commands are reachable either
+  directly or through the discoverable leader-key menu:
+  - ~C-c m l~ → edit each selected line as its own cursor
+  - ~C-c m a~ → mark all occurrences like this
+  - ~C-c m n~/~C-c m p~ → mark next/previous occurrence
+
+* Summary
+
+| Binding      | Command                        |
+|--------------+-----------------------------------|
+| ~C->~        | mark next like this               |
+| ~C-<~        | mark previous like this           |
+| ~C-c C->~    | mark all like this                |
+| ~C-!~        | mark all, dwim                    |
+| ~C-c m l~    | edit lines (one cursor per line)  |
+| ~C-c m a~    | mark all like this                |
+| ~C-c m n~    | mark next like this               |
+| ~C-c m p~    | mark previous like this           |

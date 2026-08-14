@@ -1,0 +1,61 @@
+#+TITLE: init-prog.el — Generic programming defaults
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Small, dependency-free quality-of-life settings that apply to every
+~prog-mode~-derived buffer (i.e. basically any programming-language
+major mode, since almost all of them derive from ~prog-mode~).
+
+* Walkthrough
+
+#+begin_src emacs-lisp
+(add-hook 'prog-mode-hook #'display-line-numbers-mode)
+(add-hook 'prog-mode-hook #'electric-pair-mode)
+#+end_src
+
+- Every programming buffer gets line numbers in the margin
+  (~display-line-numbers-mode~).
+- Every programming buffer gets automatic matching-bracket/quote
+  insertion (~electric-pair-mode~): typing an opening
+  paren/bracket/brace/quote automatically inserts its closing
+  counterpart.
+
+#+begin_src emacs-lisp
+(show-paren-mode 1)
+(setq show-paren-delay 0)
+#+end_src
+
+Globally highlights the matching paren/bracket/brace when point is
+next to one, with no delay (instant highlighting), making nested
+expressions easier to read.
+
+#+begin_src emacs-lisp
+(setq-default indent-tabs-mode nil
+              tab-width 4)
+#+end_src
+
+Sets the default indentation style to spaces rather than tabs,
+buffer-locally overridable by individual language modes that have
+stronger conventions (e.g. Makefiles requiring tabs). ~tab-width~ is
+set to 4 columns as the default visual width for any literal tab
+characters that do appear.
+
+#+begin_src emacs-lisp
+(add-hook 'before-save-hook #'delete-trailing-whitespace)
+#+end_src
+
+Trims trailing whitespace from every line automatically before
+saving any buffer (not just programming buffers, since
+~before-save-hook~ is global) -- this only touches trailing
+whitespace, not the whole buffer's formatting.
+
+* Summary
+
+| Setting                                  | Effect                                         |
+|--------------------------------------------+---------------------------------------------------|
+| ~display-line-numbers-mode~ on prog-mode   | Line numbers in every programming buffer       |
+| ~electric-pair-mode~ on prog-mode          | Auto-insert matching closing bracket/quote     |
+| ~show-paren-mode~, delay 0                 | Instant matching-paren highlighting, globally  |
+| ~indent-tabs-mode~ nil, ~tab-width~ 4      | Spaces for indentation by default              |
+| ~delete-trailing-whitespace~ before save   | Trim trailing whitespace on every save         |

@@ -1,0 +1,52 @@
+#+TITLE: init-treesit.el — Tree-sitter powered major modes
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Enables automatic use of Emacs's native tree-sitter major modes
+(~*-ts-mode~) wherever a matching grammar is available, via
+[[https://github.com/renzmann/treesit-auto][treesit-auto]].
+
+* Background
+
+Emacs 29+ ships a native tree-sitter integration, and Emacs 29/30
+include several ~*-ts-mode~ major modes (e.g. ~python-ts-mode~,
+~js-ts-mode~) that give much better syntax highlighting and
+indentation than their classic counterparts -- but only once the
+matching tree-sitter grammar has been compiled and installed for
+that language. Without a grammar, the ~-ts-mode~ major mode either
+isn't usable or falls back to reduced functionality.
+
+~treesit-auto~ automates this: it fetches/builds the needed grammars
+on demand, and automatically remaps classic major modes (e.g.
+~rust-mode~) to their ~-ts-mode~ equivalent (~rust-ts-mode~) once the
+grammar is present. This is why ~init-langs.el~ (which installs the
+classic major-mode packages) is loaded *before* this file -- there
+has to be a classic mode already associated with each file extension
+for treesit-auto to have something to remap from.
+
+* Walkthrough
+
+#+begin_src emacs-lisp
+(use-package treesit-auto
+  :demand t
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (global-treesit-auto-mode))
+#+end_src
+
+- ~treesit-auto-install~ set to ~'prompt~: when a buffer is opened in
+  a language treesit-auto knows about but no grammar is installed
+  yet, ask before automatically downloading/compiling it, rather than
+  doing so silently or never at all.
+- ~global-treesit-auto-mode~ turns treesit-auto's automatic
+  mode-remapping on globally, so it applies to every buffer/major
+  mode it knows how to handle.
+
+* Summary
+
+| Setting                    | Effect                                                      |
+|------------------------------+------------------------------------------------------------------|
+| ~treesit-auto-install~ = prompt | Ask before installing missing tree-sitter grammars         |
+| ~global-treesit-auto-mode~      | Automatically remap classic modes to ~-ts-mode~ equivalents |

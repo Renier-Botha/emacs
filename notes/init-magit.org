@@ -1,0 +1,67 @@
+#+TITLE: init-magit.el — Magit setup
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Minimal [[https://magit.vc/][Magit]] configuration (Git porcelain
+inside Emacs), plus ~diff-hl~ for showing live git-diff markers in
+the fringe.
+
+* Walkthrough
+
+** Magit
+
+#+begin_src emacs-lisp
+(use-package magit
+  :bind (("C-x g" . magit-status))
+  :config
+  (setq magit-diff-refine-hunk 'all
+        magit-save-repository-buffers 'dontask))
+#+end_src
+
+- ~C-x g~ is bound globally to ~magit-status~, the main entry point
+  into Magit (also separately reachable via ~C-c g s~, see
+  ~init-keybindings.el~).
+- ~magit-diff-refine-hunk~ set to ~'all~: word-level diff highlighting
+  is shown within every hunk in diffs, not just the currently
+  selected one, making changes easier to spot at a glance.
+- ~magit-save-repository-buffers~ set to ~'dontask~: modified buffers
+  belonging to the repository are saved automatically before running
+  Magit commands, without prompting each time. This keeps Magit fast
+  and simple, avoiding an extra confirmation step and the risk of
+  operating on stale on-disk state.
+
+** diff-hl
+
+#+begin_src emacs-lisp
+(use-package diff-hl
+  :demand t
+  :config
+  (global-diff-hl-mode 1)
+  (add-hook 'magit-pre-refresh-hook #'diff-hl-magit-pre-refresh)
+  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
+  (add-hook 'dired-mode-hook #'diff-hl-dired-mode))
+#+end_src
+
+[[https://github.com/dgutov/diff-hl][diff-hl]] shows added/removed/
+modified line markers in the fringe, updated live against the
+current git HEAD (i.e. relative to the current branch), similar to
+GitGutter in other editors.
+
+- ~global-diff-hl-mode~ turns this on in all applicable buffers.
+- The two Magit hooks refresh the fringe markers after Magit
+  operations (commit, stage, etc.), since those don't otherwise
+  trigger ~after-save-hook~ (which is normally what diff-hl listens
+  to for updates) -- without this, the fringe markers would go stale
+  after staging/committing via Magit until the next buffer save.
+- ~global-diff-hl-mode~ only covers file-visiting buffers; Dired
+  needs its own minor mode (~diff-hl-dired-mode~) to show per-file
+  git status in the margin of a directory listing, hence the extra
+  hook on ~dired-mode-hook~.
+
+* Summary
+
+| Package | Role                                                              |
+|---------+----------------------------------------------------------------------|
+| magit   | Git porcelain UI, bound to ~C-x g~                                  |
+| diff-hl | Live git-diff fringe/margin markers, refreshed after Magit actions  |

@@ -1,0 +1,209 @@
+#+TITLE: init.el — Minimal, fast-starting Emacs config
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+~init.el~ is the main entry point of the configuration. It is
+intentionally small: it wires up package management, a couple of
+global "sane defaults," and then delegates all topic-specific
+configuration to the per-topic files under ~modules/~.
+
+Key design choices:
+- Package management via built-in ~package.el~ + ~use-package~ (no
+  Straight.el, Elpaca, etc.)
+- [[https://github.com/emacscollective/no-littering][no-littering]]
+  keeps all Emacs-generated files (backups, auto-saves, custom.el,
+  etc.) tidily under ~.emacs.d/var/~ and ~.emacs.d/etc/~ instead of
+  scattered across ~.emacs.d~.
+- Extra configuration lives in per-topic files under ~modules/~, each
+  named ~init-<topic>.el~, loaded via plain ~require~.
+
+* Walkthrough
+
+** Restore sane GC/file-handler settings after startup
+
+#+begin_src emacs-lisp
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 16 1024 1024)
+                  gc-cons-percentage 0.1
+                  file-name-handler-alist my/file-name-handler-alist-backup)))
+#+end_src
+
+This undoes the two "make startup faster" hacks from ~early-init.el~:
+- ~gc-cons-threshold~/~gc-cons-percentage~ are set back to reasonable
+  values (16 MiB threshold, 10% of heap growth) instead of staying at
+  ~most-positive-fixnum~ forever, which would let Emacs balloon its
+  memory usage indefinitely between GCs during normal use.
+- ~file-name-handler-alist~ is restored from the backup variable that
+  ~early-init.el~ stashed it in, so that TRAMP (remote file editing),
+  compressed-file handling (jka-compr), etc. work normally again
+  after startup.
+
+~emacs-startup-hook~ runs once, after all init files have been
+processed and the initial frame is up, so this is the right place to
+undo temporary startup-only settings.
+
+** Package management
+
+#+begin_src emacs-lisp
+(require 'package)
+(setq package-archives
+      '(("gnu"    . "https://elpa.gnu.org/packages/")
+        ("melpa"  . "https://melpa.org/packages/")
+        ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+(setq package-quickstart nil)
+(package-initialize)
+
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t
+      use-package-expand-minimally t)
+#+end_src
+
+- Three package archives are configured: GNU ELPA, MELPA, and NonGNU
+  ELPA, covering the vast majority of publicly available packages.
+- ~package-quickstart~ is left off deliberately: quickstart trades
+  startup speed for needing to remember to regenerate a cache file
+  whenever packages change, and (more importantly) this config avoids
+  refreshing package archive metadata over the network on every
+  startup. Instead, ~package-refresh-contents~ is meant to be run
+  manually (~M-x package-refresh-contents~) only when you actually
+  need to see new/updated package versions.
+- ~use-package~ is bootstrapped if it isn't already installed (this
+  only matters on a brand new Emacs install, since ~use-package~ has
+  shipped built into Emacs since 29, but this keeps things working on
+  older Emacs versions too).
+- ~use-package-always-ensure~ = t means every ~(use-package foo ...)~
+  form implicitly installs ~foo~ if it's missing, so module files
+  don't need to repeat ~:ensure t~ everywhere.
+- ~use-package-expand-minimally~ = t produces smaller/faster expanded
+  code (fewer safety checks/messages), trading a bit of debuggability
+  for startup speed.
+
+** no-littering: keep .emacs.d clean
+
+#+begin_src emacs-lisp
+(setq no-littering-etc-directory
+      (expand-file-name "etc/" user-emacs-directory))
+(setq no-littering-var-directory
+      (expand-file-name "var/" user-emacs-directory))
+
+(use-package no-littering
+  :demand t
+  :config
+  (setq auto-save-file-name-transforms
+        `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+  (setq backup-directory-alist
+        `((".*" . ,(no-littering-expand-var-file-name "backup/"))))
+  (setq custom-file (no-littering-expand-etc-file-name "custom.el"))
+  (when (file-exists-p custom-file)
+    (load custom-file 'noerror)))
+#+end_src
+
+~no-littering-etc-directory~ and ~no-littering-var-directory~ *must*
+be set before the ~no-littering~ package is loaded/configured, since
+it reads them once to decide where "config-like" vs "data-like" files
+should go. Here:
+- ~etc/~ is used for configuration-like files (here, ~custom.el~).
+- ~var/~ is used for generated/data-like files (auto-saves, backups,
+  and anything else no-littering redirects by default, such as
+  ~recentf~, ~savehist~, etc. via its default redirections).
+
+Inside ~:config~:
+- Auto-save files and backup files are explicitly redirected into
+  ~var/auto-save/~ and ~var/backup/~ respectively (no-littering
+  redirects many built-in variables automatically, but auto-save and
+  backup file *names* need this extra nudge since they're governed by
+  transform/alist variables rather than a single directory
+  variable).
+- ~custom-file~ (where ~M-x customize~ writes its generated code) is
+  pointed at ~etc/custom.el~ instead of the default (appending to
+  ~init.el~ itself), and loaded if present -- this keeps
+  customize-generated code out of the hand-written init files
+  entirely.
+
+** Basic sane defaults
+
+#+begin_src emacs-lisp
+(setq inhibit-startup-screen t
+      initial-scratch-message nil
+      ring-bell-function 'ignore
+      use-short-answers t
+      make-backup-files t
+      create-lockfiles nil)
+
+(menu-bar-mode -1)
+(when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(column-number-mode 1)
+#+end_src
+
+- No splash screen, no message in ~*scratch*~, no audible/visual bell.
+- ~use-short-answers~: prompts accept "y"/"n" instead of
+  "yes"/"no".
+- ~make-backup-files~ is kept enabled (t) -- backups are wanted, they
+  just live under ~var/backup/~ thanks to no-littering above.
+- ~create-lockfiles~ is disabled: Emacs's ~.#foo~ symlink lock files
+  are mostly useful for multi-user editing collision detection, which
+  isn't a concern in a typical single-user setup, and they can
+  confuse some external tools (file watchers, build tools, etc.).
+- The menu bar, tool bar, and scroll bar are disabled. The
+  ~fboundp~ checks guard against running in a build of Emacs without
+  those features (e.g. ~emacs -nw~/no-toolkit builds, where
+  ~tool-bar-mode~ or ~scroll-bar-mode~ may not even be defined).
+- ~column-number-mode~ shows the current column in the mode line,
+  alongside the line number.
+
+** Load modules
+
+#+begin_src emacs-lisp
+(add-to-list 'load-path (expand-file-name "modules" user-emacs-directory))
+
+(require 'init-magit)
+(require 'init-prog)
+(require 'init-completion)
+(require 'init-minibuffer)
+(require 'init-navigation)
+(require 'init-multiple-cursors)
+(require 'init-langs)
+(require 'init-lisp)
+(require 'init-treesit)
+(require 'init-eglot)
+(require 'init-keybindings)
+(require 'init-clipboard)
+#+end_src
+
+Each file in ~modules/~ is a self-contained topic (e.g. Magit setup,
+minibuffer completion UI, keybindings) that ends with ~(provide
+'init-<topic>)~, so it can be pulled in with a plain ~require~ once
+its directory is on ~load-path~.
+
+The load order matters in a couple of places:
+- ~init-keybindings.el~ (which defines ~my/leader-def~ via ~general~)
+  is loaded *before* ~init-clipboard.el~, which uses ~my/leader-def~
+  to add clipboard-related leader bindings. If the order were
+  reversed, ~init-clipboard.el~ would fail because ~my/leader-def~
+  wouldn't be defined yet.
+- Similarly, ~init-langs.el~ (classic major modes: ~rust-mode~,
+  ~go-mode~, etc.) is loaded before ~init-treesit.el~ (which remaps
+  those classic modes to tree-sitter equivalents when available).
+- ~init-lisp.el~ (Common Lisp support via SLY) has no ordering
+  dependency on anything else -- it doesn't use Eglot or the leader
+  key -- so it's simply grouped next to the other language-support
+  modules.
+
+See each module's own ~notes/init-<topic>.org~ file for details.
+
+* Summary
+
+| Section              | Responsibility                                             |
+|----------------------+-------------------------------------------------------------|
+| GC/file-handler hook | Undo early-init.el's startup-speed hacks once startup ends  |
+| Package management   | Configure archives, bootstrap use-package                   |
+| no-littering         | Redirect generated files (custom.el, backups, auto-saves)   |
+| Basic sane defaults  | Disable UI chrome, startup screen, tune small UX settings   |
+| Load modules         | require each modules/init-*.el file, in dependency order    |

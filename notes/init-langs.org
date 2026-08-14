@@ -1,0 +1,80 @@
+#+TITLE: init-langs.el — Classic major modes so tree-sitter can remap them
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Installs the "classic" (non tree-sitter) major-mode packages for
+Rust, Go, TypeScript, and Svelte, purely so that
+[[https://github.com/renzmann/treesit-auto][treesit-auto]] (configured
+in ~init-treesit.el~) has something to remap.
+
+* Why this is needed
+
+~treesit-auto~ only *remaps* an already-existing classic major mode
+to its ~-ts-mode~ counterpart (e.g. ~rust-mode~ → ~rust-ts-mode~). It
+doesn't invent a major mode association out of nowhere.
+
+Emacs core doesn't ship a classic ~rust-mode~, ~go-mode~, or
+~typescript-mode~ -- so without installing these packages,
+~.rs~/~.go~/~.ts~ files would have no major mode association at all
+and would fall back to ~fundamental-mode~ (no syntax highlighting, no
+indentation support, nothing for treesit-auto to remap).
+
+Installing these small packages provides two things:
+1. ~auto-mode-alist~ entries and a working (classic) major mode even
+   when no tree-sitter grammar is installed yet for that language.
+2. Something for ~treesit-auto~ to automatically upgrade to the
+   ~-ts-mode~ version once the corresponding grammar is available.
+
+~svelte-mode~ is a bit different: it has no tree-sitter equivalent in
+Emacs yet, so it's included here as a permanent, plain (web-mode
+based) major mode rather than a placeholder to be remapped later.
+
+* Walkthrough
+
+#+begin_src emacs-lisp
+(use-package rust-mode
+  :mode "\\.rs\\'")
+
+(use-package go-mode
+  :mode "\\.go\\'")
+
+(use-package typescript-mode
+  :mode ("\\.ts\\'" . typescript-mode))
+
+(use-package svelte-mode
+  :mode "\\.svelte\\'")
+
+(use-package clojure-mode
+  :mode (("\\.clj\\'" . clojure-mode)
+         ("\\.cljs\\'" . clojurescript-mode)
+         ("\\.cljc\\'" . clojurec-mode)))
+#+end_src
+
+Each ~use-package~ form here does two things: installs the package
+(via ~use-package-always-ensure~, set in ~init.el~) and registers its
+file extension in ~auto-mode-alist~ via ~:mode~.
+
+~clojure-mode~ is included here for the same reason as the others:
+treesit-auto's built-in recipe list knows how to remap ~clojure-mode~,
+~clojurescript-mode~, and ~clojurec-mode~ to ~clojure-ts-mode~ (using
+the [[https://github.com/sogaiu/tree-sitter-clojure][tree-sitter-clojure]]
+grammar) once that grammar is installed -- so it fits the exact same
+"classic mode for treesit-auto to remap" pattern as Rust/Go/TypeScript,
+rather than needing its own separate module. Eglot's LSP support for
+all of these modes (via ~clojure-lsp~) is configured in
+~init-eglot.el~; see that module's notes.
+
+* Summary
+
+| Package          | Extension(s)             | Superseded by (if grammar present)  |
+|------------------+---------------------------+---------------------------------------|
+| rust-mode        | ~.rs~                     | ~rust-ts-mode~                       |
+| go-mode          | ~.go~                     | ~go-ts-mode~                         |
+| typescript-mode  | ~.ts~                     | ~typescript-ts-mode~                 |
+| svelte-mode      | ~.svelte~                 | (none -- stays as svelte-mode)       |
+| clojure-mode     | ~.clj~/~.cljs~/~.cljc~    | ~clojure-ts-mode~                    |
+
+Load order note: ~init.el~ requires ~init-langs~ *before*
+~init-treesit~, so these classic modes exist and are registered
+before ~treesit-auto~ starts trying to remap them.

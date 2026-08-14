@@ -1,0 +1,80 @@
+#+TITLE: init-completion.el — Fast in-buffer completion
+#+PROPERTY: header-args :tangle no
+
+* Purpose
+
+Configures in-buffer "completion at point" (the popup that appears
+while typing code, e.g. showing function/variable names) using
+[[https://github.com/minad/corfu][Corfu]] and
+[[https://github.com/oantolin/orderless][Orderless]].
+
+* Walkthrough
+
+** Corfu
+
+#+begin_src emacs-lisp
+(use-package corfu
+  :demand t
+  :custom
+  (corfu-auto t)
+  (corfu-auto-delay 0.1)
+  (corfu-auto-prefix 2)
+  (corfu-cycle t)
+  :config
+  (global-corfu-mode))
+#+end_src
+
+Corfu is a small, fast, non-intrusive completion-at-point UI (as
+opposed to heavier alternatives like Company). It works great
+together with Eglot (configured in ~init-eglot.el~), since Eglot
+supplies completions via the standard
+~completion-at-point-functions~ machinery that Corfu displays --
+no glue code needed between the two.
+
+- ~corfu-auto~: automatically pop up completions while typing,
+  instead of requiring an explicit keypress.
+- ~corfu-auto-delay~: wait 0.1s of idle time before popping up, so it
+  doesn't flicker on every single keystroke.
+- ~corfu-auto-prefix~: only start completing once at least 2
+  characters have been typed, to avoid a wall of noise after just one
+  character.
+- ~corfu-cycle~: wrap around from the last candidate back to the
+  first (and vice versa) when cycling through candidates.
+- ~global-corfu-mode~ enables Corfu in all buffers, rather than
+  needing to enable it per-buffer/per-mode.
+
+** Orderless
+
+#+begin_src emacs-lisp
+(use-package orderless
+  :demand t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+#+end_src
+
+Orderless provides better fuzzy/out-of-order matching for completion
+candidates: instead of requiring candidates to match as a prefix (or
+one contiguous substring), you can type space-separated fragments in
+any order (e.g. "fo ba" matches "foo-bar" and "bar-foo" alike).
+
+- ~completion-styles~ is set to try ~orderless~ first, falling back
+  to Emacs's built-in ~basic~ style.
+- ~completion-category-overrides~ overrides this specifically for the
+  ~file~ completion category (e.g. ~find-file~), using ~basic~ and
+  ~partial-completion~ instead -- these behave more predictably for
+  filesystem paths (respecting path separators, wildcards, etc.)
+  than orderless's word-based matching would.
+
+This module works together with ~vertico~, ~marginalia~, and
+~embark~ (configured in ~init-minibuffer.el~) and ~consult~
+(~init-navigation.el~) to form a full Vertico + Orderless + Consult +
+Marginalia + Embark completion stack for the minibuffer, while this
+module specifically handles in-buffer completion via Corfu.
+
+* Summary
+
+| Package   | Role                                                     |
+|-----------+-----------------------------------------------------------|
+| corfu     | Popup completion-at-point UI, auto-triggered while typing |
+| orderless | Space-separated, order-independent fuzzy matching style   |
