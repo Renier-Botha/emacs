@@ -54,6 +54,7 @@
 
 (add-to-list 'load-path (expand-file-name "modules" user-emacs-directory))
 
+(require 'init-evil)
 (require 'init-magit)
 (require 'init-prog)
 (require 'init-completion)

@@ -10,9 +10,13 @@
 (use-package general
   :demand t
   :config
+  ;; Leader key: SPC in Evil's normal/visual/motion states, C-SPC in
+  ;; insert/emacs states, and C-c everywhere (including non-Evil buffers).
   (general-create-definer my/leader-def
+    :states '(normal visual motion emacs insert)
     :keymaps 'override
-    :prefix "C-c"
+    :prefix "SPC"
+    :non-normal-prefix "C-SPC"
     :global-prefix "C-c")
 
   (defun my/open-terminal-below ()
@@ -26,8 +30,21 @@
     (term-set-escape-char ?\C-x))
 
   (my/leader-def
+    "SPC" '(execute-extended-command :which-key "M-x")
+    "u"   '(universal-argument :which-key "universal argument")
+
+    "t" '(:ignore t :which-key "toggle")
+    "te" '(evil-mode :which-key "toggle evil mode (global)")
+
     "o" '(:ignore t :which-key "open")
     "ot" '(my/open-terminal-below :which-key "terminal below")
+
+    "w" '(:ignore t :which-key "window")
+    "wv" '(split-window-right :which-key "split right")
+    "ws" '(split-window-below :which-key "split below")
+    "wd" '(delete-window :which-key "delete window")
+    "wo" '(delete-other-windows :which-key "delete other windows")
+    "ww" '(other-window :which-key "other window")
 
     "b" '(:ignore t :which-key "buffer")
     "bb" '(consult-buffer :which-key "switch buffer")
