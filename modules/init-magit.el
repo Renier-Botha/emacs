@@ -3,7 +3,8 @@
 ;;; Code:
 
 (use-package magit
-  :bind (("C-x g" . magit-status))
+  :bind (("C-x g" . magit-status)
+         ("C-x v b" . magit-blame))
   :config
   (setq magit-diff-refine-hunk 'all
         magit-save-repository-buffers 'dontask))

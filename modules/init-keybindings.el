@@ -56,6 +56,13 @@
 
     "g" '(:ignore t :which-key "git")
     "gs" '(magit-status :which-key "status")
+    "gb" '(magit-blame :which-key "blame")
+    "gl" '(magit-log-current :which-key "log")
+    "gc" '(magit-commit :which-key "commit")
+    "gp" '(magit-push :which-key "push")
+    "gP" '(magit-pull :which-key "pull")
+    "gf" '(magit-fetch :which-key "fetch")
+    "gd" '(magit-diff-buffer-file :which-key "diff file")
 
     "c" '(:ignore t :which-key "code")
     "cd" '(xref-find-definitions :which-key "find definitions")

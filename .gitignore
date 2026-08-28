@@ -24,3 +24,6 @@
 # Local machine-specific overrides, not meant to be committed.
 custom.el
 local.el
+
+# Ignore generated themes
+modules/init-theme.el
