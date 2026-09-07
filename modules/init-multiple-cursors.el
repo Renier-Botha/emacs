@@ -3,6 +3,7 @@
 ;;; Code:
 
 (use-package multiple-cursors
+  :diminish multiple-cursors-mode
   :bind (("C->"     . mc/mark-next-like-this)
          ("C-<"     . mc/mark-previous-like-this)
          ("C-c C->" . mc/mark-all-like-this)

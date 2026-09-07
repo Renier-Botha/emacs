@@ -5,12 +5,14 @@
 (use-package corfu
   :demand t
   :custom
-  (corfu-auto t)
-  (corfu-auto-delay 0.1)
-  (corfu-auto-prefix 2)
+  ;; No automatic popup while typing -- only show completions when
+  ;; explicitly requested (see `SPC c c' in init-keybindings.el).
+  (corfu-auto nil)
   (corfu-cycle t)
+  (corfu-popupinfo-delay '(0.5 . 0.2))
   :config
-  (global-corfu-mode))
+  (global-corfu-mode)
+  (corfu-popupinfo-mode))
 
 (use-package orderless
   :demand t

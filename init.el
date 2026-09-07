@@ -24,6 +24,8 @@
 (setq use-package-always-ensure t
       use-package-expand-minimally t)
 
+(use-package diminish :demand t)
+
 (setq no-littering-etc-directory
       (expand-file-name "etc/" user-emacs-directory))
 (setq no-littering-var-directory
@@ -66,6 +68,7 @@
 (require 'init-lisp)
 (require 'init-treesit)
 (require 'init-eglot)
+(require 'init-dape)
 (require 'init-keybindings)
 (require 'init-clipboard)
 

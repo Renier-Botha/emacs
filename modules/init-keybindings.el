@@ -65,6 +65,7 @@
     "gd" '(magit-diff-buffer-file :which-key "diff file")
 
     "c" '(:ignore t :which-key "code")
+    "cc" '(completion-at-point :which-key "complete at point")
     "cd" '(xref-find-definitions :which-key "find definitions")
     "cr" '(xref-find-references :which-key "find references")
     "ca" '(eglot-code-actions :which-key "code actions")
@@ -73,6 +74,10 @@
 
     "p" '(:ignore t :which-key "project")
     "pf" '(project-find-file :which-key "find file in project")
+    "pg" '(project-find-regexp :which-key "find regexp in project")
+    "pp" '(project-switch-project :which-key "switch project")
+    "pc" '(project-compile :which-key "compile")
+    "pk" '(project-kill-buffers :which-key "kill project buffers")
 
     "s" '(:ignore t :which-key "search")
     "sl" '(consult-line :which-key "search line")
@@ -83,6 +88,20 @@
     "jw" '(avy-goto-word-1 :which-key "jump to word (1 char)")
     "jW" '(avy-goto-word-2 :which-key "jump to word (2 chars)")
     "jl" '(avy-goto-line :which-key "jump to line")
+
+    "d" '(:ignore t :which-key "debug")
+    "dd" '(dape :which-key "start/select debug session")
+    "db" '(dape-breakpoint-toggle :which-key "toggle breakpoint")
+    "dB" '(dape-breakpoint-remove-all :which-key "remove all breakpoints")
+    "dn" '(dape-next :which-key "next (step over)")
+    "di" '(dape-step-in :which-key "step in")
+    "do" '(dape-step-out :which-key "step out")
+    "dc" '(dape-continue :which-key "continue")
+    "dr" '(dape-restart :which-key "restart")
+    "dq" '(dape-quit :which-key "quit session")
+    "dR" '(dape-repl :which-key "repl")
+    "dI" '(dape-info :which-key "info panels")
+    "dw" '(dape-watch-dwim :which-key "add watch")
 
     "m" '(:ignore t :which-key "multiple-cursors")
     "mn" '(mc/mark-next-like-this :which-key "mark next like this")

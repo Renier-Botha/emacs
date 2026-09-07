@@ -4,6 +4,7 @@
 
 (use-package eglot
   :ensure nil
+  :diminish eglot-mode
   :bind (:map eglot-mode-map
               ("C-c l r" . eglot-rename)
               ("C-c l a" . eglot-code-actions)

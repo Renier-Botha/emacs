@@ -30,12 +30,14 @@
 (use-package evil-surround
   :after evil
   :demand t
+  :diminish evil-surround-mode
   :config
   (global-evil-surround-mode 1))
 
 (use-package evil-commentary
   :after evil
   :demand t
+  :diminish evil-commentary-mode
   :config
   (evil-commentary-mode 1))
 
